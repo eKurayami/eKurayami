@@ -1,0 +1,73 @@
+local dataStores = game:GetService("DataStoreService"):GetDataStore("BucksDataStore")
+local defaultCash = 0
+local playerLeft = 0
+
+game.Players.PlayerAdded:Connect(function(player)
+	
+	playerLeft = playerLeft + 1
+	
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats"
+	leaderstats.Parent = player
+	
+	local Bucks = Instance.new("IntValue")
+	Bucks.Name = "Bucks"
+	Bucks.Value = 0
+	Bucks.Parent = leaderstats
+	
+	
+	player.CharacterAdded:Connect(function(character)
+		character.Humanoid.WalkSpeed = 16
+		character.Humanoid.Died:Connect(function()
+			-- Whenever somebody dies, this event will run
+			
+			if character.Humanoid and character.Humanoid:FindFirstChild("creator") then
+				game.ReplicatedStorage.Status.Value = tostring(character.Humanoid.creator.Value.." KILLED "..player.Name)
+			end
+			
+			if character:FindFirstChild("GameTag") then
+				character.GameTag:Destroy()
+			end
+			
+			player:LoadCharacter()
+		end)
+		
+	end)
+	
+	-- DataStores
+	
+	local player_data
+	
+	pcall(function()
+		player_data = dataStores:GetAsync(player.UserId.."-Bucks")
+	end)
+	
+	if player_data ~= nil then
+		-- Player has saved data , load it in
+		Bucks.Value = player_data
+	else
+		-- New player
+		Bucks.Value = defaultCash
+	end
+
+end)
+
+local bindableEvent = Instance.new("BindableEvent")
+
+game.Players.PlayerRemoving:Connect(function(player)
+	
+	pcall(function()
+		dataStores:GetAsync(player.UserId.."-Bucks", player.leaderstats.Bucks.Value)
+		print("Saved")
+		playerLeft = playerLeft - 1
+		bindableEvent:Fire()
+	end)
+	
+end)
+
+game:BindToClose(function()
+	-- This will trigger upon shutdown
+	while playerLeft > 0 do
+		bindableEvent.Event:Wait()
+	end
+end)
